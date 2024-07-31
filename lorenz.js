@@ -14,27 +14,37 @@ const material = new THREE.LineBasicMaterial({
   color: 0xffffff
 });
 
-let rho = 28;
-let sigma = 10;
-let beta = 8 / 3;
+const rho = 28;
+const sigma = 10;
+const beta = 8 / 3;
 
-const pos = new THREE.Vector3(0, 0, 0);
-function delta(pos, dt) {
-  dx = sigma * (pos.y - pos.x) * dt;
-  dy = (pos.x * (rho - pos.z) - pos.y) * dt;
-  dz = (pos.x * pos.y - beta * pos.z) * dt;
-  return new THREE.Vector3(dx, dy, dz);
-}
+// function delta(pos, dt) {
+//   let dx = sigma * (pos.y - pos.x) * dt;
+//   let dy = (pos.x * (rho - pos.z) - pos.y) * dt;
+//   let dz = (pos.x * pos.y - beta * pos.z) * dt;
+//   return new THREE.Vector3(dx, dy, dz);
+// }
 
-const points = [];
-const geometry = new THREE.BufferGeometry().setFromPoints(points);
+const pos0 = new THREE.Vector3(0, 0, 0);
+const pos1 = new THREE.Vector3(10, 0, 0);
+const points = [pos0, pos1];
+
+const curve = new THREE.CatmullRomCurve3(points);
+const geometry = new THREE.BufferGeometry().setFromPoints(curve.getPoints(50));
+
 const line = new THREE.Line(geometry, material);
-
 scene.add(line);
 
-function animate() {
-  new_pos = pos.clone() + delta(points[points.length - 1]);
-  points.push(new_pos);
+const animate = function () {
+  points.push(points[points.length - 1].clone().add(new THREE.Vector3(1, 0, 0)));
+
+  curve.points = points;
+  const newPoints = curve.getPoints(50);
+  line.geometry.setFromPoints(newPoints);
+
+
   renderer.render(scene, camera);
+  requestAnimationFrame(animate);
 }
-renderer.setAnimationLoop(animate);
+// renderer.setAnimationLoop(animate);
+requestAnimationFrame(animate);
