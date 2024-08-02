@@ -1,22 +1,35 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 
-// Constants for the attractor
-const RHO = 28;
-const SIGMA = 10;
-const BETA = 8 / 3;
+// Parameters
+let rho, sigma, beta;
+
+// A collection of interesting parameters TODO: Add the camera/animation settings.
+const INTERESTINGPARAMS = {
+  'Lorenz': [28, 10, 8 / 3],
+  'Moon': [100, 1, 0],
+  'AppotekerSign': [28, 10, 1 / 3],
+  'Snail': [28, 1, 8 / 3],
+};
+
+
+// console.log(THREE.BufferGeometry.computeBoundingSphere());
 
 // Constants for the simulation
+const PARAMCONFIGNAME = 'Lorenz'; // The parameter configuration to use in the simulation
+const CAMERAZPOSITION = 100;
 const NUMLINES = 3;
 const MAXPOINTSPERLINE = 10000; // Maximum number of points in the attractor line
-const dt = 0.01 // Timestep (Controls the granularity of the trajectories)
+const ANIMATEINTERVAL = 1; // The time (in ms) between every animation frame
+const NUMREPEATS = 1; // How often to update the simulation per animation frame
+const DT = 0.01 // Timestep (Controls the granularity of the trajectories)
 
 const delta = function (r, dt) {
   // Given a position vector, calculate the change in that vector 
   // according to the Lorenz differential equations
-  const dxdt = SIGMA * (r.y - r.x);
-  const dydt = r.x * (RHO - r.z) - r.y;
-  const dzdt = r.x * r.y - BETA * r.z;
+  const dxdt = sigma * (r.y - r.x);
+  const dydt = r.x * (rho - r.z) - r.y;
+  const dzdt = r.x * r.y - beta * r.z;
   return new THREE.Vector3(dxdt, dydt, dzdt).multiplyScalar(dt);
 };
 
@@ -27,14 +40,23 @@ const newPos = function (pos, dt) {
   return pos.clone().add(dp);
 };
 
+// Set parameters
+const setParams = function (paramDict, name) {
+  const params = paramDict[name];
+  rho = params[0];
+  sigma = params[1];
+  beta = params[2];
+}
+setParams(INTERESTINGPARAMS, PARAMCONFIGNAME);
+
 // Setup the renderer
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
 // Setup the camera
-const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-camera.position.set(0, 0, 130);
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 10000); // TODO: Set clipping based on parameter choices
+camera.position.set(0, 0, CAMERAZPOSITION);
 
 // Configure camera controls
 const controls = new OrbitControls(camera, renderer.domElement);
@@ -66,13 +88,13 @@ for (let lineIndex = 0; lineIndex < NUMLINES; lineIndex++) {
   // Add line and leading point materials
   // TODO: Add proper methods for color generation
   const lineMaterial = new THREE.LineBasicMaterial({ color: LINECOLORS[lineIndex] });
-  const pointMaterial = new THREE.PointsMaterial({
-    color: LINECOLORS[(lineIndex + 1) % LINECOLORS.length],
-    size: 5,
-    sizeAttenuation: false,
-  });
-  lineDict['lineMaterial'] = lineMaterial;
-  lineDict['pointMaterial'] = pointMaterial;
+  // const pointMaterial = new THREE.PointsMaterial({
+  //   color: LINECOLORS[(lineIndex + 1) % LINECOLORS.length],
+  //   size: 5,
+  //   sizeAttenuation: false,
+  // });
+  // lineDict['lineMaterial'] = lineMaterial;
+  // lineDict['pointMaterial'] = pointMaterial;
 
   // Prepopulate the line's buffer geometry, since resizing is costly
   const r0 = r0s[lineIndex]; // Initial condition
@@ -87,7 +109,7 @@ for (let lineIndex = 0; lineIndex < NUMLINES; lineIndex++) {
   // Create a line and and add it to the scene
   const line = new THREE.Line(lineGeometry, lineMaterial);
   scene.add(line);
-  lineDict['line'] = line;
+  // lineDict['line'] = line;
 
 
   LINES.push(lineDict);
@@ -100,13 +122,10 @@ for (let lineIndex = 0; lineIndex < NUMLINES; lineIndex++) {
 //const point = new THREE.Points(pointGeometry, pointMaterial);
 //scene.add(point);
 
-const animateInterval = 1; // The time (in ms) between every animation frame
-const numRepeats = 1; // How often to update the simulation per animation frame
-
 let lastTime = 0;
 const animate = function (time) {
-  if (time - lastTime > animateInterval) {
-    for (let i = 0; i < numRepeats; i++) {
+  if (time - lastTime > ANIMATEINTERVAL) {
+    for (let i = 0; i < NUMREPEATS; i++) {
       for (let lineIndex = 0; lineIndex < NUMLINES; lineIndex++) {
         // Get data for a specific line
         const lineDict = LINES[lineIndex];
@@ -114,7 +133,7 @@ const animate = function (time) {
         const lineGeometry = lineDict['lineGeometry'];
 
         const current_pos = points[points.length - 1];
-        points.push(newPos(current_pos, dt));
+        points.push(newPos(current_pos, DT));
         points.shift(); // Remove the oldest point
 
         // Update geometry with new points
