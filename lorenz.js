@@ -1,6 +1,19 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 
+const drawAxes = function (scene) {
+  let range = 100;
+  let spacing = 10;
+  const axisMaterial = new THREE.LineBasicMaterial({ 'color': 0xffffff });
+  const points = [
+    new THREE.Vector3(-range, 0, 0),
+    new THREE.Vector3(range, 0, 0),
+  ]
+  const axisGeometry = new THREE.BufferGeometry().setFromPoints(points);
+  const axisLine = new THREE.Line(axisGeometry, axisMaterial);
+  scene.add(axisLine);
+}
+
 // Parameters
 let rho, sigma, beta;
 
@@ -71,6 +84,10 @@ controls.autoRotateSpeed = 1;
 // Setup the scene
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x000000);
+
+// Add axis
+drawAxes(scene);
+
 
 const LINES = []; // Contains a dictionary enrtries with the details for every line
 const LINECOLORS = [0xff0000, 0x00ff00, 0x0000ff];
