@@ -1,19 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 
-const drawAxes = function (scene) {
-  let range = 100;
-  let spacing = 10;
-  const axisMaterial = new THREE.LineBasicMaterial({ 'color': 0xffffff });
-  const points = [
-    new THREE.Vector3(-range, 0, 0),
-    new THREE.Vector3(range, 0, 0),
-  ]
-  const axisGeometry = new THREE.BufferGeometry().setFromPoints(points);
-  const axisLine = new THREE.Line(axisGeometry, axisMaterial);
-  scene.add(axisLine);
-}
-
 // Parameters
 let rho, sigma, beta;
 
@@ -24,9 +11,6 @@ const INTERESTINGPARAMS = {
   'AppotekerSign': [28, 10, 1 / 3],
   'Snail': [28, 1, 8 / 3],
 };
-
-
-// console.log(THREE.BufferGeometry.computeBoundingSphere());
 
 // Constants for the simulation
 const PARAMCONFIGNAME = 'Lorenz'; // The parameter configuration to use in the simulation
@@ -85,10 +69,6 @@ controls.autoRotateSpeed = 1;
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x000000);
 
-// Add axis
-drawAxes(scene);
-
-
 const LINES = []; // Contains a dictionary enrtries with the details for every line
 const LINECOLORS = [0xff0000, 0x00ff00, 0x0000ff];
 // Initial displacement vectors.
@@ -103,15 +83,12 @@ for (let lineIndex = 0; lineIndex < NUMLINES; lineIndex++) {
   // A dictionary storing all information about the line
   const lineDict = {};
   // Add line and leading point materials
-  // TODO: Add proper methods for color generation
   const lineMaterial = new THREE.LineBasicMaterial({ color: LINECOLORS[lineIndex] });
-  // const pointMaterial = new THREE.PointsMaterial({
-  //   color: LINECOLORS[(lineIndex + 1) % LINECOLORS.length],
-  //   size: 5,
-  //   sizeAttenuation: false,
-  // });
-  // lineDict['lineMaterial'] = lineMaterial;
-  // lineDict['pointMaterial'] = pointMaterial;
+  const pointMaterial = new THREE.PointsMaterial({
+    color: LINECOLORS[(lineIndex + 1) % LINECOLORS.length], // TODO: Add proper methods for color generation
+    size: 5,
+    sizeAttenuation: false,
+  });
 
   // Prepopulate the line's buffer geometry, since resizing is costly
   const r0 = r0s[lineIndex]; // Initial condition
@@ -119,25 +96,26 @@ for (let lineIndex = 0; lineIndex < NUMLINES; lineIndex++) {
   for (let i = 0; i < MAXPOINTSPERLINE; i++) {
     points.push(r0);
   }
+
   const lineGeometry = new THREE.BufferGeometry().setFromPoints(points);
+  const pointGeometry = new THREE.BufferGeometry();
+  const pointPosition = points[points.length - 1]; // Leading point in attractor line
+  pointGeometry.setAttribute('position', new THREE.Float32BufferAttribute(pointPosition.toArray(), 3));
+
+  // Add information required to update simulation to dictionary
   lineDict['points'] = points;
   lineDict['lineGeometry'] = lineGeometry;
+  lineDict['pointGeometry'] = pointGeometry;
 
-  // Create a line and and add it to the scene
+  // Create a line and leading point and add them to the scene
   const line = new THREE.Line(lineGeometry, lineMaterial);
+  const point = new THREE.Points(pointGeometry, pointMaterial);
   scene.add(line);
-  // lineDict['line'] = line;
-
+  scene.add(point);
 
   LINES.push(lineDict);
 }
 
-//// Add the leading point as a colored one
-//let pointPosition = points[points.length - 1];
-//const pointGeometry = new THREE.BufferGeometry();
-//pointGeometry.setAttribute('position', new THREE.Float32BufferAttribute(pointPosition.toArray(), 3));
-//const point = new THREE.Points(pointGeometry, pointMaterial);
-//scene.add(point);
 
 let lastTime = 0;
 const animate = function (time) {
@@ -156,9 +134,10 @@ const animate = function (time) {
         // Update geometry with new points
         lineGeometry.setFromPoints(points);
 
-        // // Update leading point
-        // pointGeometry.attributes.position.set(points[points.length - 1].toArray());
-        // pointGeometry.attributes.position.needsUpdate = true;
+        // Update leading point
+        const pointGeometry = lineDict['pointGeometry'];
+        pointGeometry.attributes.position.set(points[points.length - 1].toArray());
+        pointGeometry.attributes.position.needsUpdate = true;
 
         lastTime = time;
       }
